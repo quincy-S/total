@@ -41,7 +41,7 @@ input[type="number"] {
           justify-content: center;
           padding: 1rem;
           box-sizing: border-box;
-          background-image: url('public/loveworld.png');
+          background-image: url('/loveworld.png');
           background-size: cover;
           background-position: center;
         }
