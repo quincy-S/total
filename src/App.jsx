@@ -5,7 +5,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { toast } from 'react-toastify';
 
 
-const BACKEND_BASE_URL = process.env.REACT_APP_BACKEND_API_URL || 'http://localhost:5000';
+const BACKEND_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
 // Main App component for the user information form
 const App = () => {
   // State variables to store form input values
