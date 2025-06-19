@@ -41,7 +41,7 @@ input[type="number"] {
           justify-content: center;
           padding: 1rem;
           box-sizing: border-box;
-          background-image: url('/loveworld.png');
+          background-image: url('/1a4128b3-c7f7-4c75-a9ea-357048e9a44d.jpg');
           background-size: cover;
           background-position: center;
         }
@@ -84,7 +84,7 @@ input[type="number"] {
           .background-right {
             display: block; /* Show the background div */
             grid-column: 2 / 3; /* Place it in the second column */
-background-image: url('src/assets/1a4128b3-c7f7-4c75-a9ea-357048e9a44d.jpg');
+background-image: url('/1a4128b3-c7f7-4c75-a9ea-357048e9a44d.jpg');
             background-size: cover;
             background-position: center;
             border-radius: 0 0.75rem 0.75rem 0; /* Rounded corners only on the right */
