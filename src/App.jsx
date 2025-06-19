@@ -136,22 +136,51 @@ const App = () => {
 
        // In a real application, you would send this formData to your Node.js backend:
     fetch(`${BACKEND_BASE_URL}/data`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(formData),
-    })
-    .then(response => response.json())
-    .then(data => {
-      console.log('Success:', data);
-     toast.success('Submitted successfully!');
-      // Optionally clear form or show success message
-    })
-    .catch((error) => {
-      console.error('Error submitting form:', error);
-      toast.error('Failed to submit form. See console for details.');
-    });
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify(formData),
+})
+.then(response => {
+  if (response.status === 204) {
+    // Specifically handle 204 No Content as a success
+    console.log('Success: Server returned 204 No Content.');
+    toast.success('Submitted successfully!');
+    // No need to parse JSON as there's no body, just return a resolved promise.
+    return Promise.resolve(null); // Return null or a marker for no content
+  } else if (response.ok) {
+    // Handle other successful 2xx responses (e.g., 200 OK, 201 Created)
+    // where a JSON body is expected.
+    return response.json();
+  } else {
+    // For non-2xx responses (e.g., 400, 500), assume it's a failure.
+    // Try to parse JSON for error details if available, otherwise just use status.
+    return response.json()
+      .then(errorData => {
+        // If server sends an error message in JSON
+        throw new Error(errorData.message || `Server responded with status: ${response.status}`);
+      })
+      .catch(() => {
+        // If response is not JSON or no specific error message
+        throw new Error(`Server responded with status: ${response.status}`);
+      });
+  }
+})
+.then(data => {
+  // This block executes if response.ok was true AND it wasn't a 204.
+  // 'data' here is the parsed JSON from the server.
+  if (data) { // Check if data exists (it won't if 204 was handled)
+    console.log('Success:', data);
+    toast.success('Submitted successfully!');
+    // Optionally clear form or show success message if needed for 200/201 responses
+  }
+})
+.catch((error) => {
+  // This block executes if any error occurs (network error, JSON parsing error for 204, or explicit error thrown in the .then block)
+  console.error('Error submitting form:', error);
+  toast.error('Failed to submit form. See console for details.'); 
+});
 
     // You can add further logic here, such as sending data to a server
     // For now, we'll just show a simple alert or log confirmation
