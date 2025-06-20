@@ -115,6 +115,7 @@ const App = () => {
       organization,
       userName,
       contact,
+      contactMode,
     };
 
     if (!validateContact(contact)){
