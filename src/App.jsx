@@ -4,8 +4,13 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { toast } from 'react-toastify';
 
+// Make sure you import XLSX if you're using it as a module
+// If you're loading it globally via a script tag, you might not need this.
+// For a modern React setup (e.g., Vite, Create React App), it's usually imported.
+import * as XLSX from 'xlsx';
 
 const BACKEND_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL || 'http://localhost:5000';
+
 // Main App component for the user information form
 const App = () => {
   // State variables to store form input values
@@ -19,6 +24,8 @@ const App = () => {
   const [fileError, setFileError] = useState('');
   // New state to manage the contact input mode: 'initial', 'single', or 'bulk'
   const [contactMode, setContactMode] = useState('initial');
+  // New state for loading indicator
+  const [loading, setLoading] = useState(false); // <--- New state variable
 
   // Sample organization names for the dropdown
   const organizations = [
@@ -31,7 +38,7 @@ const App = () => {
     "Others"
   ];
 
-   // Handler for file upload
+  // Handler for file upload
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (!file) {
@@ -40,7 +47,6 @@ const App = () => {
       return;
     }
 
-    // Updated file type validation for .xlsx
     const validFileTypes = [
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx MIME type
       'application/vnd.ms-excel' // .xls MIME type (older Excel, usually handled too)
@@ -57,21 +63,15 @@ const App = () => {
 
     reader.onload = (e) => {
       try {
-        // Read the file as an ArrayBuffer for SheetJS
         const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' }); // Use XLSX from the global scope
+        const workbook = XLSX.read(data, { type: 'array' });
 
-        // Get the first sheet name
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
 
-        // Convert worksheet to JSON array.
-        // By default, sheet_to_json will use the first row as headers.
         const jsonContacts = XLSX.utils.sheet_to_json(worksheet);
 
-        // Validate and format the extracted contacts
         const parsedContacts = jsonContacts.map(row => {
-          // Assuming the columns are named 'name' and 'number' (case-insensitive check for robustness)
           const nameKey = Object.keys(row).find(key => key.toLowerCase() === 'name');
           const numberKey = Object.keys(row).find(key => key.toLowerCase() === 'number');
 
@@ -81,8 +81,8 @@ const App = () => {
           if (name && number) {
             return { name, number };
           }
-          return null; // Return null for invalid rows
-        }).filter(Boolean); // Filter out any nulls (rows without valid name/number)
+          return null;
+        }).filter(Boolean);
 
         if (parsedContacts.length > 0) {
           setOtherContacts(parsedContacts);
@@ -103,108 +103,96 @@ const App = () => {
       setOtherContacts([]);
     };
 
-    // Read the file content as an ArrayBuffer
     reader.readAsArrayBuffer(file);
   };
 
   // Handler for form submission
-  const handleSubmit = (e) => {
-    e.preventDefault(); // Prevent default form submission behavior
+  const handleSubmit = async (e) => { // <--- Made function async
+    e.preventDefault();
+
+    // Input validation before showing loader
+    if (!validateContact(contact)){
+      return toast.warning("Kindly enter a valid Ghanaian number for your contact.")
+    }
+
+    if (contactMode === 'single' && !validateContact(inviteeNumber)){
+      return toast.warning("Kindly enter a valid Ghanaian number for invitee's contact.")
+    }
+
+    // Check for bulk contacts if in bulk mode
+    if (contactMode === 'bulk' && otherContacts.length === 0) {
+      // You might want to allow submission if the user is just registering themselves
+      // or ensure that a file has been uploaded if bulk is selected.
+      // For now, if bulk mode is selected, expect contacts.
+      if (!fileError && otherContacts.length === 0) { // If no file error, but no contacts found
+         return toast.warning("Please upload a valid Excel file with contacts for bulk submission.");
+      } else if (fileError) { // If there was a file error
+          return toast.warning(fileError);
+      }
+    }
+
+
+    setLoading(true); // <--- Set loading to true when submission starts
 
     const formData = {
       organization,
       userName,
       contact,
-      contactMode,
+      contactMode, // <--- Send contactMode to the backend
     };
-
-    if (!validateContact(contact)){
-      return toast.warning("Kindly enter a valid Ghanaian number")
-    }
 
     if (contactMode === 'single') {
       formData.inviteeName = inviteeName;
       formData.inviteeNumber = inviteeNumber;
-      if (!validateContact(inviteeNumber)){
-      return toast.warning("Kindly enter a valid Ghanaian number")
-    }
     } else if (contactMode === 'bulk') {
       formData.otherContacts = otherContacts;
     }
 
-    // Log all form data to the console
-    // console.log(formData);
-
-       // In a real application, you would send this formData to your Node.js backend:
-    fetch(`${BACKEND_BASE_URL}`, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify(formData),
-})
-.then(response => {
-  if (response.status === 204) {
-    // Specifically handle 204 No Content as a success
-    console.log('Success: Server returned 204 No Content.');
-    toast.success('Submitted successfully!');
-    // No need to parse JSON as there's no body, just return a resolved promise.
-    return Promise.resolve(null); // Return null or a marker for no content
-  } else if (response.ok) {
-    // Handle other successful 2xx responses (e.g., 200 OK, 201 Created)
-    // where a JSON body is expected.
-    return response.json();
-  } else {
-    // For non-2xx responses (e.g., 400, 500), assume it's a failure.
-    // Try to parse JSON for error details if available, otherwise just use status.
-    return response.json()
-      .then(errorData => {
-        // If server sends an error message in JSON
-        throw new Error(errorData.message || `Server responded with status: ${response.status}`);
-      })
-      .catch(() => {
-        // If response is not JSON or no specific error message
-        throw new Error(`Server responded with status: ${response.status}`);
+    try {
+      const response = await fetch(`${BACKEND_BASE_URL}/submitFormData`, { // Corrected endpoint
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
       });
-  }
-})
-.then(data => {
-  // This block executes if response.ok was true AND it wasn't a 204.
-  // 'data' here is the parsed JSON from the server.
-  if (data) { // Check if data exists (it won't if 204 was handled)
-    console.log('Success:', data);
-    toast.success('Submitted successfully!');
-    // Optionally clear form or show success message if needed for 200/201 responses
-  }
-})
-.catch((error) => {
-  // This block executes if any error occurs (network error, JSON parsing error for 204, or explicit error thrown in the .then block)
-  console.error('Error submitting form:', error);
-  toast.error('Failed to submit form. See console for details.'); 
-});
 
-    // You can add further logic here, such as sending data to a server
-    // For now, we'll just show a simple alert or log confirmation
-    
+      if (response.status === 204) {
+        console.log('Success: Server returned 204 No Content.');
+        toast.success('Submitted successfully!');
+      } else if (response.ok) {
+        const data = await response.json();
+        console.log('Success:', data);
+        toast.success('Submitted successfully!');
+      } else {
+        const errorData = await response.json().catch(() => ({ message: `Server responded with status: ${response.status}` }));
+        throw new Error(errorData.message || `Server responded with status: ${response.status}`);
+      }
 
-    // Optionally, reset the form fields after submission
-    // setOrganization('');
-    // setUserName('');
-    // setContact('');
-    // setInviteeName('');
-    // setInviteeNumber('');
-    // setOtherContacts([]);
-    // setContactMode('initial'); // Reset mode
+      // Optionally, reset the form fields after successful submission
+      // setOrganization('');
+      // setUserName('');
+      // setContact('');
+      // setInviteeName('');
+      // setInviteeNumber('');
+      // setOtherContacts([]);
+      // setContactMode('initial');
+
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      toast.error(`Failed to submit form: ${error.message}`);
+    } finally {
+      setLoading(false); // <--- Set loading to false when submission finishes (success or failure)
+    }
   };
 
   function validateContact(input) {
     const regex = /^0\d{9}$/;
     return regex.test(input);
   }
-  
+
   return (
     <>
-
       <div className="container">
         <div className="form-card">
           <div className='logo'>
@@ -261,13 +249,10 @@ const App = () => {
               <input
                 type="number"
                 id="contact"
-                // onBlur={handleBlur}
                 name="contact"
                 value={contact}
                 onChange={(e) => {
-                  // if(validateContact(e.target.value)){
-                    setContact(e.target.value)
-                  // }
+                  setContact(e.target.value)
                 }}
                 className="form-input"
                 placeholder="e.g., 0244123223"
@@ -299,10 +284,9 @@ const App = () => {
 
             {contactMode === 'single' && (
               <>
-                {/* Father's Name Input */}
                 <div className="form-group">
                   <label htmlFor="inviteeName" className="form-label">
-                    Invite's Name
+                    Invitee's Name
                   </label>
                   <input
                     type="text"
@@ -316,16 +300,14 @@ const App = () => {
                   />
                 </div>
 
-                {/* Father's Contact Input */}
                 <div className="form-group">
                   <label htmlFor="inviteeNumber" className="form-label">
-                    Invite's Contact
+                    Invitee's Contact
                   </label>
                   <input
                     type="number"
                     id="inviteeNumber"
                     name="inviteeNumber"
-                    // onBlur={handleBlur}
                     value={inviteeNumber}
                     onChange={(e) => setInviteeNumber(e.target.value)}
                     className="form-input"
@@ -339,48 +321,38 @@ const App = () => {
             {contactMode === 'bulk' && (
               <div className="form-group">
                 <label htmlFor="otherContactsFile" className="form-label">
-                  Upload Other Contacts (CSV)
+                  Upload Other Contacts (Excel .xlsx or .xls)
                 </label>
                 <input
                   type="file"
                   id="otherContactsFile"
                   name="otherContactsFile"
-                  accept=".csv"
+                  accept=".xlsx, .xls" // Updated accept attribute
                   onChange={handleFileUpload}
                   className="form-file-input"
                 />
                 {fileError && <p className="error-message">{fileError}</p>}
-
-                {/* {otherContacts.length > 0 && (
-                  <div className="contact-list-container">
-                    <p className="form-label">Contacts from file:</p>
-                    <ul className="contact-list">
-                      {otherContacts.map((c, index) => (
-                        <li key={index} className="contact-list-item">
-                          <span className="contact-name">{c.name}</span>
-                          <span className="contact-number">{c.number}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )} */}
               </div>
             )}
 
-            {/* Submit Button (only show if a mode has been selected) */}
+            {/* Submit Button with loader */}
             {contactMode !== 'initial' && (
               <div className="form-group" style={{ marginTop: '2rem' }}>
                 <button
                   type="submit"
                   className="submit-button"
+                  disabled={loading} // <--- Disable button when loading
                 >
-                  Submit
+                  {loading ? (
+                    <div className="loader"></div> // <--- Loader component
+                  ) : (
+                    'Submit'
+                  )}
                 </button>
               </div>
             )}
           </form>
         </div>
-        {/* New div for the background image on the right for larger screens */}
         <div className="background-right"></div>
       </div>
       <ToastContainer />

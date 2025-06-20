@@ -144,6 +144,29 @@ background-image: url('/1a4128b3-c7f7-4c75-a9ea-357048e9a44d.jpg');
           box-sizing: border-box;
         }
 
+        /* Loader Styles */
+.loader {
+  border: 4px solid #f3f3f3; /* Light grey */
+  border-top: 4px solid #3498db; /* Blue */
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto; /* Center the loader inside the button */
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Optional: Make the button more appealing when disabled */
+.submit-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
         .form-file-input {
             padding: 0.75rem 1rem;
         }
