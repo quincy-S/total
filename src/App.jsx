@@ -135,7 +135,7 @@ const App = () => {
     // console.log(formData);
 
        // In a real application, you would send this formData to your Node.js backend:
-    fetch(`${BACKEND_BASE_URL}/data`, {
+    fetch(`${BACKEND_BASE_URL}`, {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -187,13 +187,13 @@ const App = () => {
     
 
     // Optionally, reset the form fields after submission
-    setOrganization('');
-    setUserName('');
-    setContact('');
-    setInviteeName('');
-    setInviteeNumber('');
-    setOtherContacts([]);
-    setContactMode('initial'); // Reset mode
+    // setOrganization('');
+    // setUserName('');
+    // setContact('');
+    // setInviteeName('');
+    // setInviteeNumber('');
+    // setOtherContacts([]);
+    // setContactMode('initial'); // Reset mode
   };
 
   function validateContact(input) {
