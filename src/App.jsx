@@ -170,13 +170,13 @@ const App = () => {
       }
 
       // Optionally, reset the form fields after successful submission
-      // setOrganization('');
-      // setUserName('');
-      // setContact('');
-      // setInviteeName('');
-      // setInviteeNumber('');
-      // setOtherContacts([]);
-      // setContactMode('initial');
+      setOrganization('');
+      setUserName('');
+      setContact('');
+      setInviteeName('');
+      setInviteeNumber('');
+      setOtherContacts([]);
+      setContactMode('initial');
 
     } catch (error) {
       console.error('Error submitting form:', error);
