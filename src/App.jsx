@@ -7,7 +7,6 @@ import { toast } from 'react-toastify';
 // Make sure you import XLSX if you're using it as a module
 // If you're loading it globally via a script tag, you might not need this.
 // For a modern React setup (e.g., Vite, Create React App), it's usually imported.
-import * as XLSX from 'xlsx';
 
 const BACKEND_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL || 'http://localhost:5000';
 
