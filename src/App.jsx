@@ -76,7 +76,9 @@ const App = () => {
 
           const name = nameKey ? String(row[nameKey]).trim() : '';
           const number = numberKey ? String(row[numberKey]).trim() : '';
-
+          if (!validateContact(number)){
+            return null;
+          }
           if (name && number) {
             return { name, number };
           }
